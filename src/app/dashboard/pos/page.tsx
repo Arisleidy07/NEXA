@@ -3,13 +3,8 @@
 import { useEffect, useState, useRef, useCallback } from "react";
 import { useAuth } from "@/contexts/AuthContext";
 import { db } from "@/lib/firebase";
-import {
-  collection,
-  query,
-  where,
-  getDocs,
-  addDoc,
-} from "firebase/firestore";
+import { collection, query, where, getDocs, addDoc } from "firebase/firestore";
+import Image from "next/image";
 import {
   ScanBarcode,
   Plus,
@@ -20,6 +15,7 @@ import {
   CheckCircle2,
   X,
   Printer,
+  Search,
 } from "lucide-react";
 import { toast } from "sonner";
 
@@ -47,9 +43,12 @@ export default function POSPage() {
   const [products, setProducts] = useState<Product[]>([]);
   const [cart, setCart] = useState<CartItem[]>([]);
   const [scanInput, setScanInput] = useState("");
+  const [searchQuery, setSearchQuery] = useState("");
   const [flashItem, setFlashItem] = useState<string | null>(null);
   const [showConfirmation, setShowConfirmation] = useState(false);
-  const [completedSale, setCompletedSale] = useState<CompletedSale | null>(null);
+  const [completedSale, setCompletedSale] = useState<CompletedSale | null>(
+    null,
+  );
   const [processing, setProcessing] = useState(false);
   const inputRef = useRef<HTMLInputElement>(null);
   const cartEndRef = useRef<HTMLDivElement>(null);
@@ -60,7 +59,7 @@ export default function POSPage() {
     if (!user) return;
     const load = async () => {
       const snap = await getDocs(
-        query(collection(db, "productos"), where("userId", "==", user.uid))
+        query(collection(db, "productos"), where("userId", "==", user.uid)),
       );
       const prods: Product[] = [];
       snap.forEach((d) => prods.push({ id: d.id, ...d.data() } as Product));
@@ -73,7 +72,7 @@ export default function POSPage() {
   useEffect(() => {
     audioRef.current = new Audio(
       "data:audio/wav;base64,UklGRl9vT19teleABIABAAEARKwAAIlYAgACABAAZGF0YU" +
-        "tvT19XQVZFZm10IBAAAAABAAEAQB8AAIA+AAACABAAZGF0YQAAAAA="
+        "tvT19XQVZFZm10IBAAAAABAAEAQB8AAIA+AAACABAAZGF0YQAAAAA=",
     );
   }, []);
 
@@ -129,6 +128,26 @@ export default function POSPage() {
     };
   }, [showConfirmation]);
 
+  const addToCart = (product: Product) => {
+    playBeep();
+    setCart((prev) => {
+      const existing = prev.find((item) => item.product.id === product.id);
+      if (existing) {
+        return prev.map((item) =>
+          item.product.id === product.id
+            ? { ...item, cantidad: item.cantidad + 1 }
+            : item,
+        );
+      }
+      return [...prev, { product, cantidad: 1 }];
+    });
+    setFlashItem(product.id);
+    setTimeout(() => setFlashItem(null), 400);
+    setTimeout(() => {
+      cartEndRef.current?.scrollIntoView({ behavior: "smooth" });
+    }, 50);
+  };
+
   const handleScan = (e: React.KeyboardEvent<HTMLInputElement>) => {
     if (e.key !== "Enter") return;
     const code = scanInput.trim();
@@ -142,28 +161,17 @@ export default function POSPage() {
       return;
     }
 
-    playBeep();
-
-    setCart((prev) => {
-      const existing = prev.find((item) => item.product.id === product.id);
-      if (existing) {
-        return prev.map((item) =>
-          item.product.id === product.id
-            ? { ...item, cantidad: item.cantidad + 1 }
-            : item
-        );
-      }
-      return [...prev, { product, cantidad: 1 }];
-    });
-
-    setFlashItem(product.id);
-    setTimeout(() => setFlashItem(null), 400);
+    addToCart(product);
     setScanInput("");
-
-    setTimeout(() => {
-      cartEndRef.current?.scrollIntoView({ behavior: "smooth" });
-    }, 50);
   };
+
+  const searchResults = searchQuery.trim()
+    ? products.filter(
+        (p) =>
+          p.nombre.toLowerCase().includes(searchQuery.toLowerCase()) ||
+          p.codigoBarras.toLowerCase().includes(searchQuery.toLowerCase()),
+      )
+    : [];
 
   const updateQuantity = (productId: string, delta: number) => {
     setCart((prev) => {
@@ -183,7 +191,10 @@ export default function POSPage() {
     setCart((prev) => prev.filter((item) => item.product.id !== productId));
   };
 
-  const total = cart.reduce((sum, item) => sum + item.product.precio * item.cantidad, 0);
+  const total = cart.reduce(
+    (sum, item) => sum + item.product.precio * item.cantidad,
+    0,
+  );
 
   const handleCheckout = async () => {
     if (!user || cart.length === 0) return;
@@ -240,8 +251,8 @@ export default function POSPage() {
     <div className="flex h-screen">
       {/* Left: Scanner + Cart */}
       <div className="flex-1 flex flex-col overflow-hidden">
-        {/* Scanner Bar */}
-        <div className="p-4 bg-card border-b border-border">
+        {/* Scanner Bar + Search */}
+        <div className="p-4 bg-card border-b border-border space-y-3">
           <div className="flex items-center gap-3">
             <div className="w-12 h-12 bg-primary/10 rounded-xl flex items-center justify-center shrink-0">
               <ScanBarcode className="w-6 h-6 text-primary" />
@@ -261,6 +272,56 @@ export default function POSPage() {
                 ENTER
               </div>
             </div>
+          </div>
+
+          {/* Search by name/code */}
+          <div className="relative">
+            <Search className="absolute left-4 top-1/2 -translate-y-1/2 w-5 h-5 text-muted" />
+            <input
+              type="text"
+              value={searchQuery}
+              onChange={(e) => setSearchQuery(e.target.value)}
+              placeholder="Buscar producto por nombre o código..."
+              className="w-full pl-12 pr-4 py-3 border border-border rounded-xl bg-white focus:ring-2 focus:ring-primary/20 focus:border-primary transition-all text-sm"
+              onClick={(e) => e.stopPropagation()}
+            />
+            {searchResults.length > 0 && (
+              <div className="absolute left-0 right-0 top-full mt-1 bg-card border border-border rounded-xl shadow-lg z-40 max-h-60 overflow-y-auto">
+                {searchResults.map((p) => (
+                  <button
+                    key={p.id}
+                    onClick={(e) => {
+                      e.stopPropagation();
+                      addToCart(p);
+                      setSearchQuery("");
+                    }}
+                    className="w-full flex items-center justify-between px-4 py-3 hover:bg-gray-50 transition-colors text-left border-b border-border last:border-0"
+                  >
+                    <div className="min-w-0 flex-1">
+                      <p className="font-medium text-sm truncate">{p.nombre}</p>
+                      <p className="text-xs text-muted font-mono">
+                        {p.codigoBarras}
+                      </p>
+                    </div>
+                    <div className="flex items-center gap-3 shrink-0 ml-3">
+                      <span className="font-semibold text-sm">
+                        ${p.precio.toFixed(2)}
+                      </span>
+                      <div className="w-8 h-8 rounded-lg bg-primary/10 flex items-center justify-center">
+                        <Plus className="w-4 h-4 text-primary" />
+                      </div>
+                    </div>
+                  </button>
+                ))}
+              </div>
+            )}
+            {searchQuery.trim() && searchResults.length === 0 && (
+              <div className="absolute left-0 right-0 top-full mt-1 bg-card border border-border rounded-xl shadow-lg z-40 px-4 py-3">
+                <p className="text-sm text-muted text-center">
+                  No se encontraron productos
+                </p>
+              </div>
+            )}
           </div>
         </div>
 
@@ -285,7 +346,9 @@ export default function POSPage() {
                     {index + 1}
                   </div>
                   <div className="flex-1 min-w-0">
-                    <p className="font-medium truncate">{item.product.nombre}</p>
+                    <p className="font-medium truncate">
+                      {item.product.nombre}
+                    </p>
                     <p className="text-sm text-muted">
                       ${item.product.precio.toFixed(2)} c/u
                     </p>
@@ -387,22 +450,41 @@ export default function POSPage() {
 
             {/* Ticket Preview */}
             <div className="p-6">
-              <div id="ticket-print" className="bg-white border border-border rounded-xl p-6">
+              <div
+                id="ticket-print"
+                className="bg-white border border-border rounded-xl p-6"
+              >
                 <div className="text-center mb-4 pb-4 border-b border-dashed border-gray-300">
+                  <Image
+                    src="/logo.png"
+                    alt="NEXA"
+                    width={48}
+                    height={48}
+                    className="mx-auto mb-2 object-contain"
+                  />
                   <h3 className="text-xl font-bold">NEXA</h3>
-                  <p className="text-sm text-muted">{user?.displayName || "Mi Negocio"}</p>
+                  <p className="text-sm text-muted">
+                    {user?.displayName || "Mi Negocio"}
+                  </p>
                   <p className="text-xs text-muted mt-1">
                     {new Date(completedSale.fecha).toLocaleString("es-DO")}
                   </p>
-                  <p className="text-xs text-muted">Venta #{completedSale.id.slice(-8).toUpperCase()}</p>
+                  <p className="text-xs text-muted">
+                    Venta #{completedSale.id.slice(-8).toUpperCase()}
+                  </p>
                 </div>
 
                 <div className="space-y-2 mb-4 pb-4 border-b border-dashed border-gray-300">
                   {completedSale.items.map((item) => (
-                    <div key={item.product.id} className="flex justify-between text-sm">
+                    <div
+                      key={item.product.id}
+                      className="flex justify-between text-sm"
+                    >
                       <div className="flex-1">
                         <span>{item.product.nombre}</span>
-                        <span className="text-muted ml-2">x{item.cantidad}</span>
+                        <span className="text-muted ml-2">
+                          x{item.cantidad}
+                        </span>
                       </div>
                       <span className="font-medium">
                         ${(item.product.precio * item.cantidad).toFixed(2)}

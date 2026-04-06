@@ -4,7 +4,14 @@ import { useEffect, useState, useCallback } from "react";
 import { useAuth } from "@/contexts/AuthContext";
 import { db } from "@/lib/firebase";
 import { collection, query, where, getDocs } from "firebase/firestore";
-import { Receipt, ChevronDown, ChevronUp, Printer, Loader2, Calendar } from "lucide-react";
+import {
+  Receipt,
+  ChevronDown,
+  ChevronUp,
+  Printer,
+  Loader2,
+  Calendar,
+} from "lucide-react";
 
 interface SaleProduct {
   productoId: string;
@@ -32,11 +39,13 @@ export default function VentasPage() {
     if (!user) return;
     try {
       const snap = await getDocs(
-        query(collection(db, "ventas"), where("userId", "==", user.uid))
+        query(collection(db, "ventas"), where("userId", "==", user.uid)),
       );
       const data: Sale[] = [];
       snap.forEach((d) => data.push({ id: d.id, ...d.data() } as Sale));
-      data.sort((a, b) => new Date(b.fecha).getTime() - new Date(a.fecha).getTime());
+      data.sort(
+        (a, b) => new Date(b.fecha).getTime() - new Date(a.fecha).getTime(),
+      );
       setSales(data);
     } catch {
       console.error("Error loading sales");
@@ -71,6 +80,7 @@ export default function VentasPage() {
       </head>
       <body>
         <div class="center">
+          <img src="/logo.png" alt="NEXA" style="width:50px;height:50px;object-fit:contain;margin:0 auto 4px;" />
           <h2>NEXA</h2>
           <p>${user?.displayName || "Mi Negocio"}</p>
           <p style="font-size:10px">${new Date(sale.fecha).toLocaleString("es-DO")}</p>
@@ -84,7 +94,7 @@ export default function VentasPage() {
             <span>${p.nombre} x${p.cantidad}</span>
             <span>$${p.subtotal.toFixed(2)}</span>
           </div>
-        `
+        `,
           )
           .join("")}
         <div class="line"></div>
@@ -103,7 +113,7 @@ export default function VentasPage() {
   };
 
   const todaySales = sales.filter(
-    (s) => new Date(s.fecha).toDateString() === new Date().toDateString()
+    (s) => new Date(s.fecha).toDateString() === new Date().toDateString(),
   );
   const todayRevenue = todaySales.reduce((sum, s) => sum + s.total, 0);
   const totalRevenue = sales.reduce((sum, s) => sum + s.total, 0);
@@ -117,26 +127,28 @@ export default function VentasPage() {
 
       {/* Summary Cards */}
       <div className="grid md:grid-cols-3 gap-6 mb-8">
-        <div className="bg-card border border-border rounded-2xl p-6">
+        <div className="bg-card border border-border/60 rounded-2xl p-6 shadow-sm">
           <p className="text-muted text-sm mb-1">Ventas Hoy</p>
           <p className="text-2xl font-bold">{todaySales.length}</p>
         </div>
-        <div className="bg-card border border-border rounded-2xl p-6">
+        <div className="bg-card border border-border/60 rounded-2xl p-6 shadow-sm">
           <p className="text-muted text-sm mb-1">Ingresos Hoy</p>
           <p className="text-2xl font-bold text-success">
-            ${todayRevenue.toLocaleString("en-US", { minimumFractionDigits: 2 })}
+            $
+            {todayRevenue.toLocaleString("en-US", { minimumFractionDigits: 2 })}
           </p>
         </div>
-        <div className="bg-card border border-border rounded-2xl p-6">
+        <div className="bg-card border border-border/60 rounded-2xl p-6 shadow-sm">
           <p className="text-muted text-sm mb-1">Ingresos Totales</p>
           <p className="text-2xl font-bold text-primary">
-            ${totalRevenue.toLocaleString("en-US", { minimumFractionDigits: 2 })}
+            $
+            {totalRevenue.toLocaleString("en-US", { minimumFractionDigits: 2 })}
           </p>
         </div>
       </div>
 
       {/* Sales List */}
-      <div className="bg-card border border-border rounded-2xl overflow-hidden">
+      <div className="bg-card border border-border/60 rounded-2xl overflow-hidden shadow-sm">
         {loading ? (
           <div className="flex items-center justify-center py-20">
             <Loader2 className="w-6 h-6 animate-spin text-primary" />
@@ -145,14 +157,19 @@ export default function VentasPage() {
           <div className="flex flex-col items-center justify-center py-20 text-muted">
             <Receipt className="w-12 h-12 mb-3 opacity-50" />
             <p className="font-medium">No hay ventas registradas</p>
-            <p className="text-sm mt-1">Las ventas aparecerán aquí después de cobrar en el POS</p>
+            <p className="text-sm mt-1">
+              Las ventas aparecerán aquí después de cobrar en el POS
+            </p>
           </div>
         ) : (
           <div>
             {sales.map((sale) => {
               const isExpanded = expandedSale === sale.id;
               return (
-                <div key={sale.id} className="border-b border-border last:border-0">
+                <div
+                  key={sale.id}
+                  className="border-b border-border last:border-0"
+                >
                   <div
                     className="flex items-center justify-between px-6 py-4 cursor-pointer hover:bg-gray-50/50 transition-colors"
                     onClick={() => setExpandedSale(isExpanded ? null : sale.id)}
@@ -164,7 +181,8 @@ export default function VentasPage() {
                       <div>
                         <p className="font-medium">
                           {sale.productos.length} producto(s) &middot;{" "}
-                          {sale.productos.reduce((s, p) => s + p.cantidad, 0)} items
+                          {sale.productos.reduce((s, p) => s + p.cantidad, 0)}{" "}
+                          items
                         </p>
                         <div className="flex items-center gap-2 text-xs text-muted mt-0.5">
                           <Calendar className="w-3 h-3" />
@@ -181,7 +199,10 @@ export default function VentasPage() {
                     </div>
                     <div className="flex items-center gap-4">
                       <p className="font-bold text-lg text-success">
-                        ${sale.total.toLocaleString("en-US", { minimumFractionDigits: 2 })}
+                        $
+                        {sale.total.toLocaleString("en-US", {
+                          minimumFractionDigits: 2,
+                        })}
                       </p>
                       {isExpanded ? (
                         <ChevronUp className="w-5 h-5 text-muted" />
@@ -197,19 +218,36 @@ export default function VentasPage() {
                         <table className="w-full text-sm">
                           <thead>
                             <tr className="bg-gray-50 border-b border-border">
-                              <th className="text-left px-4 py-2 font-medium text-muted">Producto</th>
-                              <th className="text-center px-4 py-2 font-medium text-muted">Cant.</th>
-                              <th className="text-right px-4 py-2 font-medium text-muted">Precio</th>
-                              <th className="text-right px-4 py-2 font-medium text-muted">Subtotal</th>
+                              <th className="text-left px-4 py-2 font-medium text-muted">
+                                Producto
+                              </th>
+                              <th className="text-center px-4 py-2 font-medium text-muted">
+                                Cant.
+                              </th>
+                              <th className="text-right px-4 py-2 font-medium text-muted">
+                                Precio
+                              </th>
+                              <th className="text-right px-4 py-2 font-medium text-muted">
+                                Subtotal
+                              </th>
                             </tr>
                           </thead>
                           <tbody>
                             {sale.productos.map((p, i) => (
-                              <tr key={i} className="border-b border-border last:border-0">
+                              <tr
+                                key={i}
+                                className="border-b border-border last:border-0"
+                              >
                                 <td className="px-4 py-2">{p.nombre}</td>
-                                <td className="px-4 py-2 text-center">{p.cantidad}</td>
-                                <td className="px-4 py-2 text-right">${p.precio.toFixed(2)}</td>
-                                <td className="px-4 py-2 text-right font-medium">${p.subtotal.toFixed(2)}</td>
+                                <td className="px-4 py-2 text-center">
+                                  {p.cantidad}
+                                </td>
+                                <td className="px-4 py-2 text-right">
+                                  ${p.precio.toFixed(2)}
+                                </td>
+                                <td className="px-4 py-2 text-right font-medium">
+                                  ${p.subtotal.toFixed(2)}
+                                </td>
                               </tr>
                             ))}
                           </tbody>

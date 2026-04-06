@@ -1,8 +1,8 @@
 "use client";
 
-import { useEffect, useState, useCallback } from "react";
+import { useEffect, useState, useCallback, useRef } from "react";
 import { useAuth } from "@/contexts/AuthContext";
-import { db } from "@/lib/firebase";
+import { db, storage } from "@/lib/firebase";
 import {
   collection,
   query,
@@ -13,7 +13,18 @@ import {
   deleteDoc,
   doc,
 } from "firebase/firestore";
-import { Package, Plus, Pencil, Trash2, X, Search, Loader2 } from "lucide-react";
+import { ref, uploadBytes, getDownloadURL } from "firebase/storage";
+import Image from "next/image";
+import {
+  Package,
+  Plus,
+  Pencil,
+  Trash2,
+  X,
+  Search,
+  Loader2,
+  ImagePlus,
+} from "lucide-react";
 import { toast } from "sonner";
 
 interface Product {
@@ -21,7 +32,15 @@ interface Product {
   nombre: string;
   precio: number;
   codigoBarras: string;
+  imagenUrl?: string;
   userId: string;
+}
+
+function generateBarcode(): string {
+  const prefix = "NEX";
+  const timestamp = Date.now().toString(36).toUpperCase();
+  const random = Math.random().toString(36).substring(2, 6).toUpperCase();
+  return `${prefix}-${timestamp}-${random}`;
 }
 
 export default function ProductosPage() {
@@ -31,14 +50,21 @@ export default function ProductosPage() {
   const [search, setSearch] = useState("");
   const [showModal, setShowModal] = useState(false);
   const [editing, setEditing] = useState<Product | null>(null);
-  const [form, setForm] = useState({ nombre: "", precio: "", codigoBarras: "" });
+  const [form, setForm] = useState({
+    nombre: "",
+    precio: "",
+    codigoBarras: "",
+  });
+  const [imageFile, setImageFile] = useState<File | null>(null);
+  const [imagePreview, setImagePreview] = useState<string | null>(null);
   const [saving, setSaving] = useState(false);
+  const fileInputRef = useRef<HTMLInputElement>(null);
 
   const loadProducts = useCallback(async () => {
     if (!user) return;
     try {
       const snap = await getDocs(
-        query(collection(db, "productos"), where("userId", "==", user.uid))
+        query(collection(db, "productos"), where("userId", "==", user.uid)),
       );
       const prods: Product[] = [];
       snap.forEach((d) => prods.push({ id: d.id, ...d.data() } as Product));
@@ -57,20 +83,55 @@ export default function ProductosPage() {
 
   const openCreate = () => {
     setEditing(null);
-    setForm({ nombre: "", precio: "", codigoBarras: "" });
+    setForm({ nombre: "", precio: "", codigoBarras: generateBarcode() });
+    setImageFile(null);
+    setImagePreview(null);
     setShowModal(true);
   };
 
   const openEdit = (p: Product) => {
     setEditing(p);
-    setForm({ nombre: p.nombre, precio: p.precio.toString(), codigoBarras: p.codigoBarras });
+    setForm({
+      nombre: p.nombre,
+      precio: p.precio.toString(),
+      codigoBarras: p.codigoBarras,
+    });
+    setImageFile(null);
+    setImagePreview(p.imagenUrl || null);
     setShowModal(true);
+  };
+
+  const handleImageSelect = (e: React.ChangeEvent<HTMLInputElement>) => {
+    const file = e.target.files?.[0];
+    if (!file) return;
+    if (!file.type.startsWith("image/")) {
+      toast.error("Solo se permiten imágenes");
+      return;
+    }
+    if (file.size > 5 * 1024 * 1024) {
+      toast.error("La imagen no puede superar 5MB");
+      return;
+    }
+    setImageFile(file);
+    setImagePreview(URL.createObjectURL(file));
+  };
+
+  const uploadProductImage = async (
+    productId: string,
+    file: File,
+  ): Promise<string> => {
+    const storageRef = ref(
+      storage,
+      `productos/${user!.uid}/${productId}_${Date.now()}`,
+    );
+    await uploadBytes(storageRef, file);
+    return await getDownloadURL(storageRef);
   };
 
   const handleSave = async () => {
     if (!user) return;
-    if (!form.nombre.trim() || !form.precio || !form.codigoBarras.trim()) {
-      toast.error("Completa todos los campos");
+    if (!form.nombre.trim() || !form.precio) {
+      toast.error("Completa nombre y precio");
       return;
     }
     const precio = parseFloat(form.precio);
@@ -78,26 +139,41 @@ export default function ProductosPage() {
       toast.error("Precio inválido");
       return;
     }
+    if (!editing && !imageFile) {
+      toast.error("Selecciona una imagen para el producto");
+      return;
+    }
 
     setSaving(true);
     try {
       if (editing) {
-        await updateDoc(doc(db, "productos", editing.id), {
+        const updateData: Record<string, unknown> = {
           nombre: form.nombre.trim(),
           precio,
           codigoBarras: form.codigoBarras.trim(),
-        });
+        };
+        if (imageFile) {
+          const url = await uploadProductImage(editing.id, imageFile);
+          updateData.imagenUrl = url;
+        }
+        await updateDoc(doc(db, "productos", editing.id), updateData);
         toast.success("Producto actualizado");
       } else {
-        await addDoc(collection(db, "productos"), {
+        const docRef = await addDoc(collection(db, "productos"), {
           nombre: form.nombre.trim(),
           precio,
           codigoBarras: form.codigoBarras.trim(),
           userId: user.uid,
         });
+        if (imageFile) {
+          const url = await uploadProductImage(docRef.id, imageFile);
+          await updateDoc(doc(db, "productos", docRef.id), { imagenUrl: url });
+        }
         toast.success("Producto creado");
       }
       setShowModal(false);
+      setImageFile(null);
+      setImagePreview(null);
       loadProducts();
     } catch {
       toast.error("Error al guardar");
@@ -120,7 +196,7 @@ export default function ProductosPage() {
   const filtered = products.filter(
     (p) =>
       p.nombre.toLowerCase().includes(search.toLowerCase()) ||
-      p.codigoBarras.includes(search)
+      p.codigoBarras.toLowerCase().includes(search.toLowerCase()),
   );
 
   return (
@@ -128,7 +204,9 @@ export default function ProductosPage() {
       <div className="flex items-center justify-between mb-8">
         <div>
           <h1 className="text-2xl font-bold mb-1">Productos</h1>
-          <p className="text-muted text-sm">{products.length} productos registrados</p>
+          <p className="text-muted text-sm">
+            {products.length} productos registrados
+          </p>
         </div>
         <button
           onClick={openCreate}
@@ -152,7 +230,7 @@ export default function ProductosPage() {
       </div>
 
       {/* Table */}
-      <div className="bg-card border border-border rounded-2xl overflow-hidden">
+      <div className="bg-card border border-border/60 rounded-2xl overflow-hidden shadow-sm">
         {loading ? (
           <div className="flex items-center justify-center py-20">
             <Loader2 className="w-6 h-6 animate-spin text-primary" />
@@ -164,26 +242,61 @@ export default function ProductosPage() {
               {search ? "Sin resultados" : "No hay productos"}
             </p>
             <p className="text-sm mt-1">
-              {search ? "Intenta con otro término" : "Agrega tu primer producto"}
+              {search
+                ? "Intenta con otro término"
+                : "Agrega tu primer producto"}
             </p>
           </div>
         ) : (
           <table className="w-full">
             <thead>
               <tr className="border-b border-border bg-gray-50/50">
-                <th className="text-left px-6 py-4 text-sm font-semibold text-muted">Nombre</th>
-                <th className="text-left px-6 py-4 text-sm font-semibold text-muted">Código</th>
-                <th className="text-right px-6 py-4 text-sm font-semibold text-muted">Precio</th>
-                <th className="text-right px-6 py-4 text-sm font-semibold text-muted">Acciones</th>
+                <th className="text-left px-6 py-4 text-sm font-semibold text-muted">
+                  Producto
+                </th>
+                <th className="text-left px-6 py-4 text-sm font-semibold text-muted">
+                  Código
+                </th>
+                <th className="text-right px-6 py-4 text-sm font-semibold text-muted">
+                  Precio
+                </th>
+                <th className="text-right px-6 py-4 text-sm font-semibold text-muted">
+                  Acciones
+                </th>
               </tr>
             </thead>
             <tbody>
               {filtered.map((p) => (
-                <tr key={p.id} className="border-b border-border last:border-0 hover:bg-gray-50/50 transition-colors">
-                  <td className="px-6 py-4 font-medium">{p.nombre}</td>
-                  <td className="px-6 py-4 text-muted font-mono text-sm">{p.codigoBarras}</td>
+                <tr
+                  key={p.id}
+                  className="border-b border-border last:border-0 hover:bg-gray-50/50 transition-colors"
+                >
+                  <td className="px-6 py-4">
+                    <div className="flex items-center gap-3">
+                      {p.imagenUrl ? (
+                        <Image
+                          src={p.imagenUrl}
+                          alt={p.nombre}
+                          width={44}
+                          height={44}
+                          className="rounded-lg object-cover w-11 h-11"
+                        />
+                      ) : (
+                        <div className="w-11 h-11 rounded-lg bg-gray-100 flex items-center justify-center">
+                          <Package className="w-5 h-5 text-muted" />
+                        </div>
+                      )}
+                      <span className="font-medium">{p.nombre}</span>
+                    </div>
+                  </td>
+                  <td className="px-6 py-4 text-muted font-mono text-sm">
+                    {p.codigoBarras}
+                  </td>
                   <td className="px-6 py-4 text-right font-semibold">
-                    ${p.precio.toLocaleString("en-US", { minimumFractionDigits: 2 })}
+                    $
+                    {p.precio.toLocaleString("en-US", {
+                      minimumFractionDigits: 2,
+                    })}
                   </td>
                   <td className="px-6 py-4 text-right">
                     <div className="flex items-center justify-end gap-2">
@@ -216,14 +329,54 @@ export default function ProductosPage() {
               <h2 className="text-lg font-bold">
                 {editing ? "Editar Producto" : "Nuevo Producto"}
               </h2>
-              <button onClick={() => setShowModal(false)} className="p-1 hover:bg-gray-100 rounded-lg">
+              <button
+                onClick={() => setShowModal(false)}
+                className="p-1 hover:bg-gray-100 rounded-lg"
+              >
                 <X className="w-5 h-5" />
               </button>
             </div>
 
             <div className="space-y-4">
+              {/* Image Upload */}
               <div>
-                <label className="block text-sm font-medium mb-1.5">Nombre</label>
+                <label className="block text-sm font-medium mb-1.5">
+                  Imagen del Producto{" "}
+                  {!editing && <span className="text-danger">*</span>}
+                </label>
+                <div
+                  onClick={() => fileInputRef.current?.click()}
+                  className="w-full border-2 border-dashed border-border rounded-xl p-4 flex flex-col items-center justify-center cursor-pointer hover:border-primary/40 hover:bg-primary/5 transition-all min-h-[120px]"
+                >
+                  {imagePreview ? (
+                    <Image
+                      src={imagePreview}
+                      alt="Preview"
+                      width={100}
+                      height={100}
+                      className="rounded-lg object-cover w-[100px] h-[100px]"
+                    />
+                  ) : (
+                    <>
+                      <ImagePlus className="w-8 h-8 text-muted mb-2" />
+                      <p className="text-sm text-muted">
+                        Click para subir imagen
+                      </p>
+                    </>
+                  )}
+                  <input
+                    ref={fileInputRef}
+                    type="file"
+                    accept="image/*"
+                    onChange={handleImageSelect}
+                    className="hidden"
+                  />
+                </div>
+              </div>
+              <div>
+                <label className="block text-sm font-medium mb-1.5">
+                  Nombre
+                </label>
                 <input
                   type="text"
                   value={form.nombre}
@@ -233,17 +386,23 @@ export default function ProductosPage() {
                 />
               </div>
               <div>
-                <label className="block text-sm font-medium mb-1.5">Código de Barras</label>
+                <label className="block text-sm font-medium mb-1.5">
+                  Código de Barras
+                </label>
                 <input
                   type="text"
                   value={form.codigoBarras}
-                  onChange={(e) => setForm({ ...form, codigoBarras: e.target.value })}
-                  placeholder="Ej: 7501055300846"
-                  className="w-full px-4 py-3 border border-border rounded-xl bg-white focus:ring-2 focus:ring-primary/20 focus:border-primary transition-all font-mono"
+                  readOnly
+                  className="w-full px-4 py-3 border border-border rounded-xl bg-gray-50 text-muted font-mono cursor-not-allowed"
                 />
+                <p className="text-xs text-muted mt-1">
+                  Generado automáticamente
+                </p>
               </div>
               <div>
-                <label className="block text-sm font-medium mb-1.5">Precio (RD$)</label>
+                <label className="block text-sm font-medium mb-1.5">
+                  Precio (RD$)
+                </label>
                 <input
                   type="number"
                   step="0.01"

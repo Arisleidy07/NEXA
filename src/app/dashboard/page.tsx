@@ -115,7 +115,7 @@ export default function DashboardHome() {
       {/* Quick Action */}
       <Link
         href="/dashboard/pos"
-        className="flex items-center justify-between p-6 bg-primary text-white rounded-2xl mb-8 hover:bg-primary-hover transition-colors group"
+        className="flex items-center justify-between p-6 bg-primary text-white rounded-2xl mb-8 hover:bg-primary-hover transition-all duration-200 group shadow-lg shadow-primary/20 hover:shadow-xl hover:shadow-primary/25"
       >
         <div className="flex items-center gap-4">
           <div className="w-14 h-14 bg-white/20 rounded-xl flex items-center justify-center">
@@ -135,7 +135,7 @@ export default function DashboardHome() {
           <Link
             key={card.label}
             href={card.href}
-            className="bg-card border border-border rounded-2xl p-6 hover:shadow-md transition-shadow"
+            className="bg-card border border-border/60 rounded-2xl p-6 shadow-sm hover:shadow-md transition-all duration-200 hover:-translate-y-0.5"
           >
             <div className="flex items-center justify-between mb-4">
               <div
@@ -153,7 +153,7 @@ export default function DashboardHome() {
       </div>
 
       {/* Recent Sales */}
-      <div className="bg-card border border-border rounded-2xl p-6">
+      <div className="bg-card border border-border/60 rounded-2xl p-6 shadow-sm">
         <div className="flex items-center justify-between mb-4">
           <h3 className="font-semibold text-lg">Ventas Recientes</h3>
           <Link
