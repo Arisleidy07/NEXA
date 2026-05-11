@@ -1,6 +1,6 @@
 // ============================================
-// SISTEMA PROFESIONAL DE ETIQUETAS
-// NEXA POS - Barcode REAL con JsBarcode
+// SISTEMA DE ETIQUETAS - BARCODE REAL
+// NEXA POS
 // ============================================
 
 export interface ProductoEtiqueta {
@@ -10,173 +10,110 @@ export interface ProductoEtiqueta {
 }
 
 // ============================================
-// IMPRIMIR ETIQUETA - BARCODE REAL CODE128
+// IMPRIMIR ETIQUETA
 // ============================================
 export function printLabel(producto: ProductoEtiqueta): void {
-  const printWindow = window.open("", "_blank", "width=400,height=300");
+  const printWindow = window.open("", "_blank", "width=300,height=200");
   if (!printWindow) return;
 
-  // Sanitizar datos para evitar problemas en el HTML
-  const nombreSafe = producto.nombre
-    .substring(0, 25)
-    .replace(/"/g, "&quot;")
-    .replace(/</g, "&lt;")
-    .replace(/>/g, "&gt;");
-  const precioStr = producto.precio.toFixed(2);
-  const codigoSafe = producto.codigoBarras
-    .replace(/"/g, "&quot;")
-    .replace(/</g, "&lt;")
-    .replace(/>/g, "&gt;");
+  const nombre = producto.nombre.substring(0, 20).replace(/["<>]/g, "");
+  const precio = producto.precio.toFixed(2);
+  const codigo = producto.codigoBarras.replace(/["<>]/g, "");
 
   const html = `<!DOCTYPE html>
-<html lang="es">
+<html>
 <head>
   <meta charset="UTF-8">
-  <meta name="viewport" content="width=device-width, initial-scale=1.0">
-  <title>Etiqueta - ${codigoSafe}</title>
+  <title>Etiqueta</title>
   <script src="https://cdn.jsdelivr.net/npm/jsbarcode@3.11.6/dist/JsBarcode.all.min.js"><\/script>
   <style>
-    * {
-      margin: 0;
-      padding: 0;
-      box-sizing: border-box;
-    }
+    * { margin: 0; padding: 0; box-sizing: border-box; }
     
-    @page {
-      size: 50mm 30mm;
-      margin: 0;
-      padding: 0;
-    }
+    @page { size: 50mm 30mm; margin: 0; }
     
     body {
       width: 50mm;
       height: 30mm;
-      background: #ffffff;
-      font-family: 'Arial', 'Helvetica', sans-serif;
+      background: #fff;
+      font-family: Arial, sans-serif;
       display: flex;
+      flex-direction: column;
       align-items: center;
       justify-content: center;
       padding: 2mm;
     }
     
-    .etiqueta {
-      width: 46mm;
+    .label {
+      width: 100%;
       text-align: center;
     }
     
-    .producto-nombre {
+    .name {
       font-size: 8px;
       font-weight: bold;
-      color: #000000;
+      text-transform: uppercase;
       margin-bottom: 1mm;
       white-space: nowrap;
       overflow: hidden;
       text-overflow: ellipsis;
-      text-transform: uppercase;
     }
     
-    .producto-precio {
-      font-size: 14px;
+    .price {
+      font-size: 12px;
       font-weight: bold;
-      color: #000000;
-      margin-bottom: 2mm;
-    }
-    
-    .barcode-wrapper {
-      width: 100%;
-      height: 12mm;
-      display: flex;
-      justify-content: center;
-      align-items: center;
-      margin: 1mm 0;
+      margin-bottom: 1mm;
     }
     
     #barcode {
-      max-width: 100%;
-      height: auto;
-    }
-    
-    .barcode-texto {
-      font-family: 'Courier New', monospace;
-      font-size: 7px;
-      color: #333333;
-      letter-spacing: 0.5px;
-      margin-top: 0.5mm;
+      max-width: 46mm;
     }
     
     @media print {
-      @page {
-        size: 50mm 30mm;
-        margin: 0;
-      }
-      
       body {
         print-color-adjust: exact;
         -webkit-print-color-adjust: exact;
-        background: #ffffff;
-        -webkit-print-background-adjust: exact;
-      }
-      
-      * {
-        -webkit-print-color-adjust: exact;
-        print-color-adjust: exact;
       }
     }
   </style>
 </head>
 <body>
-  <div class="etiqueta">
-    <div class="producto-nombre">${nombreSafe}</div>
-    <div class="producto-precio">$${precioStr}</div>
-    <div class="barcode-wrapper">
-      <svg id="barcode"></svg>
-    </div>
-    <div class="barcode-texto">${codigoSafe}</div>
+  <div class="label">
+    <div class="name">${nombre}</div>
+    <div class="price">$${precio}</div>
+    <svg id="barcode"></svg>
   </div>
-  
   <script>
-    (function() {
-      try {
-        JsBarcode("#barcode", "${codigoSafe}", {
-          format: "CODE128",
-          width: 1.5,
-          height: 40,
-          displayValue: false,
-          background: "#ffffff",
-          lineColor: "#000000",
-          margin: 0,
-          fontSize: 0
-        });
-        
-        // Esperar a que el barcode se renderice
-        setTimeout(function() {
-          window.print();
-          // Cerrar ventana después de imprimir
-          setTimeout(function() {
-            window.close();
-          }, 500);
-        }, 300);
-      } catch(err) {
-        console.error("Error generando barcode:", err);
-        document.querySelector(".barcode-wrapper").innerHTML = 
-          '<div style="font-size:8px;color:red;text-align:center;">BARCODE ERROR</div>';
-      }
-    })();
+    window.onload = function() {
+      JsBarcode("#barcode", "${codigo}", {
+        format: "CODE128",
+        width: 2,
+        height: 60,
+        displayValue: true,
+        background: "#ffffff",
+        lineColor: "#000000",
+        margin: 0,
+        fontSize: 12,
+        textMargin: 2
+      });
+      setTimeout(function() {
+        window.print();
+        setTimeout(function() { window.close(); }, 300);
+      }, 400);
+    };
   <\/script>
 </body>
 </html>`;
 
-  printWindow.document.open();
   printWindow.document.write(html);
   printWindow.document.close();
 }
 
 // ============================================
-// ETIQUETA DE PRUEBA - PARA TESTEAR IMPRESORA
+// ETIQUETA DE PRUEBA
 // ============================================
 export function printTestLabel(): void {
   printLabel({
-    nombre: "PRODUCTO DE PRUEBA",
+    nombre: "PRODUCTO PRUEBA",
     precio: 99.99,
     codigoBarras: "NEX-TEST-001",
   });
