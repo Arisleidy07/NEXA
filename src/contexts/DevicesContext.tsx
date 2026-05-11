@@ -7,6 +7,7 @@ import {
   useEffect,
   ReactNode,
 } from "react";
+import { printTestLabel } from "@/lib/printing";
 
 // ==========================================
 // DEVICE CONTEXT - NEXA POS
@@ -174,95 +175,11 @@ export function DevicesProvider({ children }: { children: ReactNode }) {
 
   // Test print functions
   const testPrintTicket = () => {
-    const printWindow = window.open("", "_blank", "width=400,height=600");
-    if (!printWindow) return;
-
-    const html = `
-      <!DOCTYPE html>
-      <html>
-      <head>
-        <title>Prueba de Impresión</title>
-        <style>
-          @page { size: 80mm auto; margin: 0; }
-          * { margin: 0; padding: 0; box-sizing: border-box; }
-          body { 
-            font-family: 'Courier New', monospace; 
-            width: 80mm; 
-            padding: 8px;
-            font-size: 11px;
-          }
-          .center { text-align: center; }
-          .line { border-top: 1px dashed #333; margin: 6px 0; }
-          .success { color: #059669; font-weight: bold; font-size: 14px; }
-          .header { margin-bottom: 12px; }
-          h2 { font-size: 16px; margin: 8px 0; }
-          .check { font-size: 20px; margin: 8px 0; }
-        </style>
-      </head>
-      <body>
-        <div class="header center">
-          <div class="check">✓</div>
-          <h2 class="success">PRUEBA EXITOSA</h2>
-          <p>NEXA POS System</p>
-          <p>${new Date().toLocaleString("es-DO")}</p>
-        </div>
-        <div class="line"></div>
-        <div class="center">
-          <p>Impresora de Tickets</p>
-          <p class="success">Configurada correctamente</p>
-        </div>
-        <div class="line"></div>
-        <div class="center" style="font-size:9px;margin-top:8px;">
-          <p>Caracteres: ñ á é í ó ú Ñ</p>
-          <p>Símbolos: $ % & @ #</p>
-        </div>
-        <script>window.print(); window.close();</script>
-      </body>
-      </html>
-    `;
-
-    printWindow.document.write(html);
-    printWindow.document.close();
+    printTestLabel();
   };
 
-  const testPrintLabel = () => {
-    const printWindow = window.open("", "_blank", "width=300,height=200");
-    if (!printWindow) return;
-
-    const html = `
-      <!DOCTYPE html>
-      <html>
-      <head>
-        <title>Prueba Etiqueta</title>
-        <style>
-          @page { size: 50mm 30mm; margin: 0; }
-          * { margin: 0; padding: 0; box-sizing: border-box; }
-          body { 
-            font-family: Arial, sans-serif; 
-            width: 50mm; 
-            height: 30mm; 
-            padding: 2mm;
-            display: flex;
-            flex-direction: column;
-            justify-content: center;
-            align-items: center;
-          }
-          .nombre { font-size: 8px; font-weight: bold; text-align: center; margin-bottom: 1mm; }
-          .precio { font-size: 14px; font-weight: bold; text-align: center; margin-bottom: 2mm; }
-          .test { font-size: 7px; color: #666; text-align: center; }
-        </style>
-      </head>
-      <body>
-        <div class="nombre">PRODUCTO DE PRUEBA</div>
-        <div class="precio">$99.99</div>
-        <div class="test">Etiqueta de prueba - NEXA</div>
-        <script>window.print(); window.close();</script>
-      </body>
-      </html>
-    `;
-
-    printWindow.document.write(html);
-    printWindow.document.close();
+  const handleTestLabel = () => {
+    printTestLabel();
   };
 
   return (
@@ -277,7 +194,7 @@ export function DevicesProvider({ children }: { children: ReactNode }) {
         autoPrint,
         setAutoPrint: setAutoPrintValue,
         testPrintTicket,
-        testPrintLabel,
+        testPrintLabel: handleTestLabel,
         saveSettings,
       }}
     >

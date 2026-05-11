@@ -14,12 +14,10 @@ import {
   DollarSign,
   CheckCircle2,
   X,
-  Printer,
   Search,
   Package,
 } from "lucide-react";
 import { toast } from "sonner";
-import { printTicket } from "@/lib/printing";
 
 interface Product {
   id: string;
@@ -236,23 +234,6 @@ export default function POSPage() {
     } finally {
       setProcessing(false);
     }
-  };
-
-  const handlePrint = () => {
-    if (!completedSale) return;
-
-    printTicket({
-      id: completedSale.id,
-      productos: completedSale.items.map((item) => ({
-        nombre: item.product.nombre,
-        cantidad: item.cantidad,
-        precio: item.product.precio,
-        subtotal: item.product.precio * item.cantidad,
-      })),
-      total: completedSale.total,
-      fecha: completedSale.fecha,
-      negocioNombre: user?.displayName || undefined,
-    });
   };
 
   const closeConfirmation = () => {
@@ -538,18 +519,12 @@ export default function POSPage() {
             </div>
 
             {/* Actions */}
-            <div className="px-6 pb-6 flex gap-3">
-              <button
-                onClick={handlePrint}
-                className="flex-1 py-3 border border-border rounded-xl font-medium hover:bg-gray-50 transition-colors flex items-center justify-center gap-2"
-              >
-                <Printer className="w-5 h-5" />
-                Imprimir Ticket
-              </button>
+            <div className="px-6 pb-6">
               <button
                 onClick={closeConfirmation}
-                className="flex-1 py-3 bg-primary text-white rounded-xl font-medium hover:bg-primary-hover transition-colors flex items-center justify-center gap-2"
+                className="w-full py-4 bg-primary text-white rounded-xl font-medium hover:bg-primary-hover transition-colors flex items-center justify-center gap-2"
               >
+                <CheckCircle2 className="w-5 h-5" />
                 Nueva Venta
               </button>
             </div>

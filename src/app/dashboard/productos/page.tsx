@@ -408,7 +408,6 @@ export default function ProductosPage() {
                     precio: viewingProduct.precio,
                     codigoBarras: viewingProduct.codigoBarras,
                   });
-                  toast.success("Enviando etiqueta a impresora...");
                 }}
                 className="flex-1 py-3 bg-gradient-to-r from-purple-500 to-pink-500 text-white rounded-xl font-semibold hover:from-purple-600 hover:to-pink-600 transition-colors flex items-center justify-center gap-2"
               >
