@@ -2,6 +2,7 @@ import type { Metadata } from "next";
 import { Geist, Geist_Mono } from "next/font/google";
 import { AuthProvider } from "@/contexts/AuthContext";
 import { InventarioProvider } from "@/contexts/InventarioContext";
+import { DevicesProvider } from "@/contexts/DevicesContext";
 import { Toaster } from "sonner";
 import "./globals.css";
 
@@ -38,8 +39,10 @@ export default function RootLayout({
       <body className="min-h-full flex flex-col bg-background text-foreground">
         <AuthProvider>
           <InventarioProvider>
-            {children}
-            <Toaster position="top-right" richColors closeButton />
+            <DevicesProvider>
+              {children}
+              <Toaster position="top-right" richColors closeButton />
+            </DevicesProvider>
           </InventarioProvider>
         </AuthProvider>
       </body>

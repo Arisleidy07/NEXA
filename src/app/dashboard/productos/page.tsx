@@ -114,10 +114,6 @@ export default function ProductosPage() {
       toast.error("Solo se permiten imágenes");
       return;
     }
-    if (file.size > 5 * 1024 * 1024) {
-      toast.error("La imagen no puede superar 5MB");
-      return;
-    }
     setImageFile(file);
     setImagePreview(URL.createObjectURL(file));
   };

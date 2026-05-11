@@ -16,6 +16,7 @@ import {
   Loader2,
   User,
   ChevronDown,
+  Printer,
 } from "lucide-react";
 import { toast } from "sonner";
 
@@ -30,6 +31,7 @@ const navItems = [
     icon: History,
     label: "Historial Mov.",
   },
+  { href: "/dashboard/dispositivos", icon: Printer, label: "Dispositivos" },
 ];
 
 export default function DashboardLayout({

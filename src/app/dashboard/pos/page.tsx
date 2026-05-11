@@ -19,6 +19,7 @@ import {
   Package,
 } from "lucide-react";
 import { toast } from "sonner";
+import { printTicket } from "@/lib/printing";
 
 interface Product {
   id: string;
@@ -238,7 +239,20 @@ export default function POSPage() {
   };
 
   const handlePrint = () => {
-    window.print();
+    if (!completedSale) return;
+
+    printTicket({
+      id: completedSale.id,
+      productos: completedSale.items.map((item) => ({
+        nombre: item.product.nombre,
+        cantidad: item.cantidad,
+        precio: item.product.precio,
+        subtotal: item.product.precio * item.cantidad,
+      })),
+      total: completedSale.total,
+      fecha: completedSale.fecha,
+      negocioNombre: user?.displayName || undefined,
+    });
   };
 
   const closeConfirmation = () => {
