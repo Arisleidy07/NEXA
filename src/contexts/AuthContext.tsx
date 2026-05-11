@@ -16,6 +16,7 @@ import {
   signInWithPopup,
   GoogleAuthProvider,
   updateProfile,
+  AuthError,
 } from "firebase/auth";
 import { doc, setDoc, getDoc, onSnapshot } from "firebase/firestore";
 import { ref, uploadBytes, getDownloadURL } from "firebase/storage";
@@ -91,14 +92,70 @@ export function AuthProvider({ children }: { children: ReactNode }) {
   };
 
   const signInWithGoogle = async () => {
-    const result = await signInWithPopup(auth, googleProvider);
-    const userDoc = await getDoc(doc(db, "usuarios", result.user.uid));
-    if (!userDoc.exists()) {
-      await setDoc(doc(db, "usuarios", result.user.uid), {
-        nombre: result.user.displayName || "Mi Negocio",
-        email: result.user.email,
-        createdAt: new Date().toISOString(),
-      });
+    try {
+      const result = await signInWithPopup(auth, googleProvider);
+      const user = result.user;
+
+      if (!user.email) {
+        throw new Error("La cuenta de Google no tiene email asociado");
+      }
+
+      // Check if user exists in Firestore
+      const userDoc = await getDoc(doc(db, "usuarios", user.uid));
+
+      if (!userDoc.exists()) {
+        // Create new user document
+        await setDoc(doc(db, "usuarios", user.uid), {
+          nombre: user.displayName || "Mi Negocio",
+          email: user.email,
+          fotoUrl: user.photoURL || null,
+          createdAt: new Date().toISOString(),
+        });
+      } else {
+        // Update photo URL if changed
+        const data = userDoc.data() as UserProfile;
+        if (user.photoURL && data.fotoUrl !== user.photoURL) {
+          await setDoc(
+            doc(db, "usuarios", user.uid),
+            { fotoUrl: user.photoURL },
+            { merge: true },
+          );
+        }
+      }
+    } catch (error) {
+      console.error("Google Sign-In Error:", error);
+
+      // Check for specific Firebase error types
+      const authError = error as AuthError;
+      if (authError.code) {
+        if (authError.code === "auth/popup-closed-by-user") {
+          throw new Error("Ventana de Google cerrada. Intenta de nuevo.");
+        }
+        if (authError.code === "auth/popup-blocked") {
+          throw new Error(
+            "Popup bloqueado. Permite ventanas emergentes para este sitio.",
+          );
+        }
+        if (authError.code === "auth/cancelled-popup-request") {
+          throw new Error(
+            "Solicitud cancelada. Solo una ventana de login a la vez.",
+          );
+        }
+        if (authError.code === "auth/unauthorized-domain") {
+          throw new Error(
+            "Este dominio no está autorizado. Agrega el dominio en Firebase Console > Authentication > Settings > Authorized Domains.",
+          );
+        }
+        if (
+          authError.code === "auth/account-exists-with-different-credential"
+        ) {
+          throw new Error(
+            "Ya existe una cuenta con este email usando otro método de inicio de sesión.",
+          );
+        }
+      }
+
+      throw error;
     }
   };
 

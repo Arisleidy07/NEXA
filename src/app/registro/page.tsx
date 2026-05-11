@@ -134,8 +134,12 @@ export default function RegisterPage() {
                 await signInWithGoogle();
                 toast.success("Cuenta creada exitosamente");
                 router.push("/dashboard");
-              } catch {
-                toast.error("Error al registrar con Google");
+              } catch (error) {
+                const message =
+                  error instanceof Error
+                    ? error.message
+                    : "Error al registrar con Google";
+                toast.error(message);
               } finally {
                 setGoogleLoading(false);
               }

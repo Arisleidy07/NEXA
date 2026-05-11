@@ -113,8 +113,12 @@ export default function LoginPage() {
                 await signInWithGoogle();
                 toast.success("Bienvenido a NEXA");
                 router.push("/dashboard");
-              } catch {
-                toast.error("Error al iniciar con Google");
+              } catch (error) {
+                const message =
+                  error instanceof Error
+                    ? error.message
+                    : "Error al iniciar con Google";
+                toast.error(message);
               } finally {
                 setGoogleLoading(false);
               }
