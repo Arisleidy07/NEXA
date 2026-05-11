@@ -13,7 +13,7 @@ export interface ProductoEtiqueta {
 // IMPRIMIR ETIQUETA
 // ============================================
 export function printLabel(producto: ProductoEtiqueta): void {
-  const printWindow = window.open("", "_blank", "width=300,height=200");
+  const printWindow = window.open("", "_blank");
   if (!printWindow) return;
 
   const nombre = producto.nombre.substring(0, 20).replace(/["<>]/g, "");
@@ -29,13 +29,17 @@ export function printLabel(producto: ProductoEtiqueta): void {
   <style>
     * { margin: 0; padding: 0; box-sizing: border-box; }
     
-    @page { size: 50mm 30mm; margin: 0; }
+    @page {
+      size: 50mm 30mm;
+      margin: 0;
+      padding: 0;
+    }
     
     body {
       width: 50mm;
       height: 30mm;
-      background: #fff;
-      font-family: Arial, sans-serif;
+      background: #ffffff;
+      font-family: -apple-system, BlinkMacSystemFont, "Segoe UI", Roboto, Arial, sans-serif;
       display: flex;
       flex-direction: column;
       align-items: center;
@@ -50,26 +54,42 @@ export function printLabel(producto: ProductoEtiqueta): void {
     
     .name {
       font-size: 8px;
-      font-weight: bold;
+      font-weight: 600;
       text-transform: uppercase;
+      letter-spacing: 0.3px;
       margin-bottom: 1mm;
       white-space: nowrap;
       overflow: hidden;
       text-overflow: ellipsis;
+      color: #000000;
     }
     
     .price {
-      font-size: 12px;
-      font-weight: bold;
-      margin-bottom: 1mm;
+      font-size: 14px;
+      font-weight: 700;
+      margin-bottom: 1.5mm;
+      color: #000000;
     }
     
     #barcode {
       max-width: 46mm;
+      height: auto;
     }
     
     @media print {
+      @page {
+        size: 50mm 30mm;
+        margin: 0;
+      }
+      
       body {
+        margin: 0 !important;
+        padding: 2mm !important;
+        print-color-adjust: exact;
+        -webkit-print-color-adjust: exact;
+      }
+      
+      * {
         print-color-adjust: exact;
         -webkit-print-color-adjust: exact;
       }
@@ -87,7 +107,7 @@ export function printLabel(producto: ProductoEtiqueta): void {
       JsBarcode("#barcode", "${codigo}", {
         format: "CODE128",
         width: 2,
-        height: 60,
+        height: 70,
         displayValue: true,
         background: "#ffffff",
         lineColor: "#000000",
