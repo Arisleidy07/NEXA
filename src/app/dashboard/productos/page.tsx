@@ -24,6 +24,7 @@ import {
   Search,
   Loader2,
   ImagePlus,
+  Eye,
 } from "lucide-react";
 import { toast } from "sonner";
 
@@ -49,6 +50,8 @@ export default function ProductosPage() {
   const [loading, setLoading] = useState(true);
   const [search, setSearch] = useState("");
   const [showModal, setShowModal] = useState(false);
+  const [showViewModal, setShowViewModal] = useState(false);
+  const [viewingProduct, setViewingProduct] = useState<Product | null>(null);
   const [editing, setEditing] = useState<Product | null>(null);
   const [form, setForm] = useState({
     nombre: "",
@@ -108,12 +111,14 @@ export default function ProductosPage() {
       toast.error("Solo se permiten imágenes");
       return;
     }
-    if (file.size > 5 * 1024 * 1024) {
-      toast.error("La imagen no puede superar 5MB");
-      return;
-    }
+    // No size limit - Firebase Storage handles large files
     setImageFile(file);
     setImagePreview(URL.createObjectURL(file));
+  };
+
+  const openViewModal = (p: Product) => {
+    setViewingProduct(p);
+    setShowViewModal(true);
   };
 
   const uploadProductImage = async (
@@ -301,14 +306,23 @@ export default function ProductosPage() {
                   <td className="px-6 py-4 text-right">
                     <div className="flex items-center justify-end gap-2">
                       <button
+                        onClick={() => openViewModal(p)}
+                        className="p-2 rounded-lg hover:bg-green-50 text-muted hover:text-success transition-colors"
+                        title="Ver producto"
+                      >
+                        <Eye className="w-4 h-4" />
+                      </button>
+                      <button
                         onClick={() => openEdit(p)}
                         className="p-2 rounded-lg hover:bg-blue-50 text-muted hover:text-primary transition-colors"
+                        title="Editar producto"
                       >
                         <Pencil className="w-4 h-4" />
                       </button>
                       <button
                         onClick={() => handleDelete(p)}
                         className="p-2 rounded-lg hover:bg-red-50 text-muted hover:text-danger transition-colors"
+                        title="Eliminar producto"
                       >
                         <Trash2 className="w-4 h-4" />
                       </button>
@@ -320,6 +334,88 @@ export default function ProductosPage() {
           </table>
         )}
       </div>
+
+      {/* View Product Modal */}
+      {showViewModal && viewingProduct && (
+        <div className="fixed inset-0 bg-black/60 flex items-center justify-center z-50 p-4">
+          <div className="bg-card rounded-2xl border border-border w-full max-w-lg p-0 shadow-2xl overflow-hidden">
+            {/* Header */}
+            <div className="flex items-center justify-between p-6 border-b border-border">
+              <h2 className="text-xl font-bold">Detalles del Producto</h2>
+              <button
+                onClick={() => setShowViewModal(false)}
+                className="p-2 hover:bg-gray-100 rounded-lg transition-colors"
+              >
+                <X className="w-5 h-5" />
+              </button>
+            </div>
+
+            {/* Content */}
+            <div className="p-6">
+              {/* Large Image */}
+              <div className="w-full aspect-square max-h-[300px] mb-6 bg-gray-50 rounded-xl overflow-hidden flex items-center justify-center">
+                {viewingProduct.imagenUrl ? (
+                  <Image
+                    src={viewingProduct.imagenUrl}
+                    alt={viewingProduct.nombre}
+                    width={400}
+                    height={400}
+                    className="w-full h-full object-contain"
+                    unoptimized
+                  />
+                ) : (
+                  <div className="flex flex-col items-center text-muted">
+                    <Package className="w-20 h-20 mb-4 opacity-40" />
+                    <p className="text-lg">Sin imagen</p>
+                  </div>
+                )}
+              </div>
+
+              {/* Product Info */}
+              <div className="space-y-4">
+                <div className="bg-gray-50 rounded-xl p-4">
+                  <p className="text-sm text-muted mb-1">Nombre del Producto</p>
+                  <p className="text-xl font-bold">{viewingProduct.nombre}</p>
+                </div>
+
+                <div className="grid grid-cols-2 gap-4">
+                  <div className="bg-gray-50 rounded-xl p-4">
+                    <p className="text-sm text-muted mb-1">Código de Barras</p>
+                    <p className="font-mono text-lg font-medium">
+                      {viewingProduct.codigoBarras}
+                    </p>
+                  </div>
+                  <div className="bg-primary/10 rounded-xl p-4">
+                    <p className="text-sm text-primary mb-1">Precio</p>
+                    <p className="text-2xl font-bold text-primary">
+                      ${viewingProduct.precio.toFixed(2)}
+                    </p>
+                  </div>
+                </div>
+              </div>
+            </div>
+
+            {/* Footer */}
+            <div className="flex gap-3 p-6 border-t border-border bg-gray-50/50">
+              <button
+                onClick={() => {
+                  setShowViewModal(false);
+                  openEdit(viewingProduct);
+                }}
+                className="flex-1 py-3 bg-primary text-white rounded-xl font-semibold hover:bg-primary-hover transition-colors"
+              >
+                Editar Producto
+              </button>
+              <button
+                onClick={() => setShowViewModal(false)}
+                className="flex-1 py-3 border border-border rounded-xl font-medium hover:bg-white transition-colors"
+              >
+                Cerrar
+              </button>
+            </div>
+          </div>
+        </div>
+      )}
 
       {/* Modal */}
       {showModal && (
@@ -361,6 +457,9 @@ export default function ProductosPage() {
                       <ImagePlus className="w-8 h-8 text-muted mb-2" />
                       <p className="text-sm text-muted">
                         Click para subir imagen
+                      </p>
+                      <p className="text-xs text-muted mt-1">
+                        Sin límite de tamaño
                       </p>
                     </>
                   )}
