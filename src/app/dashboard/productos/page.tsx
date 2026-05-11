@@ -25,8 +25,11 @@ import {
   Loader2,
   ImagePlus,
   Eye,
+  Printer,
+  Tag,
 } from "lucide-react";
 import { toast } from "sonner";
+import { printLabel } from "@/lib/printing";
 
 interface Product {
   id: string;
@@ -111,7 +114,10 @@ export default function ProductosPage() {
       toast.error("Solo se permiten imágenes");
       return;
     }
-    // No size limit - Firebase Storage handles large files
+    if (file.size > 5 * 1024 * 1024) {
+      toast.error("La imagen no puede superar 5MB");
+      return;
+    }
     setImageFile(file);
     setImagePreview(URL.createObjectURL(file));
   };
@@ -279,15 +285,17 @@ export default function ProductosPage() {
                   <td className="px-6 py-4">
                     <div className="flex items-center gap-3">
                       {p.imagenUrl ? (
-                        <Image
-                          src={p.imagenUrl}
-                          alt={p.nombre}
-                          width={44}
-                          height={44}
-                          className="rounded-lg object-cover w-11 h-11"
-                        />
+                        <div className="w-11 h-11 rounded-lg overflow-hidden bg-gray-50 flex items-center justify-center shrink-0">
+                          <Image
+                            src={p.imagenUrl}
+                            alt={p.nombre}
+                            width={44}
+                            height={44}
+                            className="object-contain w-full h-full"
+                          />
+                        </div>
                       ) : (
-                        <div className="w-11 h-11 rounded-lg bg-gray-100 flex items-center justify-center">
+                        <div className="w-11 h-11 rounded-lg bg-gray-100 flex items-center justify-center shrink-0">
                           <Package className="w-5 h-5 text-muted" />
                         </div>
                       )}
@@ -399,6 +407,20 @@ export default function ProductosPage() {
             <div className="flex gap-3 p-6 border-t border-border bg-gray-50/50">
               <button
                 onClick={() => {
+                  printLabel({
+                    nombre: viewingProduct.nombre,
+                    precio: viewingProduct.precio,
+                    codigoBarras: viewingProduct.codigoBarras,
+                  });
+                  toast.success("Enviando etiqueta a impresora...");
+                }}
+                className="flex-1 py-3 bg-gradient-to-r from-purple-500 to-pink-500 text-white rounded-xl font-semibold hover:from-purple-600 hover:to-pink-600 transition-colors flex items-center justify-center gap-2"
+              >
+                <Tag className="w-4 h-4" />
+                Imprimir Etiqueta
+              </button>
+              <button
+                onClick={() => {
                   setShowViewModal(false);
                   openEdit(viewingProduct);
                 }}
@@ -408,7 +430,7 @@ export default function ProductosPage() {
               </button>
               <button
                 onClick={() => setShowViewModal(false)}
-                className="flex-1 py-3 border border-border rounded-xl font-medium hover:bg-white transition-colors"
+                className="px-6 py-3 border border-border rounded-xl font-medium hover:bg-white transition-colors"
               >
                 Cerrar
               </button>
@@ -445,21 +467,20 @@ export default function ProductosPage() {
                   className="w-full border-2 border-dashed border-border rounded-xl p-4 flex flex-col items-center justify-center cursor-pointer hover:border-primary/40 hover:bg-primary/5 transition-all min-h-[120px]"
                 >
                   {imagePreview ? (
-                    <Image
-                      src={imagePreview}
-                      alt="Preview"
-                      width={100}
-                      height={100}
-                      className="rounded-lg object-cover w-[100px] h-[100px]"
-                    />
+                    <div className="w-[120px] h-[120px] rounded-lg overflow-hidden bg-gray-50 flex items-center justify-center">
+                      <Image
+                        src={imagePreview}
+                        alt="Preview"
+                        width={120}
+                        height={120}
+                        className="object-contain w-full h-full"
+                      />
+                    </div>
                   ) : (
                     <>
                       <ImagePlus className="w-8 h-8 text-muted mb-2" />
                       <p className="text-sm text-muted">
                         Click para subir imagen
-                      </p>
-                      <p className="text-xs text-muted mt-1">
-                        Sin límite de tamaño
                       </p>
                     </>
                   )}

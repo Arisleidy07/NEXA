@@ -16,6 +16,7 @@ import {
   X,
   Printer,
   Search,
+  Package,
 } from "lucide-react";
 import { toast } from "sonner";
 
@@ -24,6 +25,7 @@ interface Product {
   nombre: string;
   precio: number;
   codigoBarras: string;
+  imagenUrl?: string;
 }
 
 interface CartItem {
@@ -286,7 +288,7 @@ export default function POSPage() {
               onClick={(e) => e.stopPropagation()}
             />
             {searchResults.length > 0 && (
-              <div className="absolute left-0 right-0 top-full mt-1 bg-card border border-border rounded-xl shadow-lg z-40 max-h-60 overflow-y-auto">
+              <div className="absolute left-0 right-0 top-full mt-1 bg-card border border-border rounded-xl shadow-lg z-40 max-h-72 overflow-y-auto">
                 {searchResults.map((p) => (
                   <button
                     key={p.id}
@@ -295,8 +297,23 @@ export default function POSPage() {
                       addToCart(p);
                       setSearchQuery("");
                     }}
-                    className="w-full flex items-center justify-between px-4 py-3 hover:bg-gray-50 transition-colors text-left border-b border-border last:border-0"
+                    className="w-full flex items-center gap-3 px-4 py-3 hover:bg-gray-50 transition-colors text-left border-b border-border last:border-0"
                   >
+                    {/* Product Image */}
+                    {p.imagenUrl ? (
+                      <Image
+                        src={p.imagenUrl}
+                        alt={p.nombre}
+                        width={48}
+                        height={48}
+                        className="w-12 h-12 rounded-lg object-cover shrink-0"
+                      />
+                    ) : (
+                      <div className="w-12 h-12 rounded-lg bg-gray-100 flex items-center justify-center shrink-0">
+                        <Package className="w-6 h-6 text-muted" />
+                      </div>
+                    )}
+
                     <div className="min-w-0 flex-1">
                       <p className="font-medium text-sm truncate">{p.nombre}</p>
                       <p className="text-xs text-muted font-mono">
